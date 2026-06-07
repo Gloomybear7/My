@@ -16,6 +16,69 @@
   .drop-zone { border:2px dashed #333; border-radius:10px; padding:18px; text-align:center; cursor:pointer; color:#555; font-size:13px; transition:border-color 0.2s; }
   .drop-zone:hover { border-color:#666; color:#888; }
   .drop-zone.dragover { border-color:#aaa; color:#ccc; }
+
+  /* Tab grid: 2 rows of 8, equal columns */
+  .tab-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    width: 100%;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 8px 2px 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    width: 100%;
+    min-width: 0;
+  }
+  .tab-btn span.emoji { font-size: 18px; }
+  .tab-btn span.label {
+    font-size: 9px;
+    font-weight: 400;
+    line-height: 1.2;
+    text-align: center;
+    word-break: break-word;
+    width: 100%;
+  }
+  .tab-btn.active span.label { font-weight: 700; }
+  .tab-btn span.count {
+    border-radius: 8px;
+    padding: 0 5px;
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  /* Card image: 2-column 3:4 */
+  .card-images {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    width: 100%;
+    overflow: hidden;
+  }
+  .card-images img {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    display: block;
+  }
+  /* single image still 3:4 but half-width feel — show centered */
+  .card-image-single {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .card-image-single img {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    display: block;
+  }
 </style>
 </head>
 <body>
@@ -45,54 +108,128 @@ const INIT = Object.fromEntries(CATEGORIES.map((c) => [c.id, []]));
 const RATINGS = ["★★★★★","★★★★☆","★★★☆☆","★★☆☆☆","★☆☆☆☆"];
 const STORAGE_KEY = "my-data-v3";
 
+// Split 16 categories into 2 rows of 8
+const ROW1 = CATEGORIES.slice(0, 8);
+const ROW2 = CATEGORIES.slice(8, 16);
+
 function App() {
   const [data, setData]       = React.useState(() => { try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : INIT; } catch { return INIT; } });
   const [active, setActive]   = React.useState("movies");
   const [input, setInput]     = React.useState("");
   const [note, setNote]       = React.useState("");
   const [rating, setRating]   = React.useState("★★★★★");
-  const [imgData, setImgData] = React.useState("");   // base64
-  const [imgUrl, setImgUrl]   = React.useState("");   // URL
+  const [imgData, setImgData] = React.useState("");
+  const [imgUrl, setImgUrl]   = React.useState("");
+  const [imgData2, setImgData2] = React.useState("");
+  const [imgUrl2, setImgUrl2]   = React.useState("");
   const [editId, setEditId]   = React.useState(null);
   const [search, setSearch]   = React.useState("");
   const [dragOver, setDragOver] = React.useState(false);
-  const fileRef = React.useRef();
+  const [dragOver2, setDragOver2] = React.useState(false);
+  const fileRef  = React.useRef();
+  const fileRef2 = React.useRef();
 
   React.useEffect(() => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {} }, [data]);
 
   const cat = CATEGORIES.find((c) => c.id === active);
   const totalItems = Object.values(data).reduce((a, b) => a + b.length, 0);
 
-  const resolvedImg = imgData || imgUrl || "";
+  const resolved1 = imgData || imgUrl || "";
+  const resolved2 = imgData2 || imgUrl2 || "";
 
-  const handleFile = (file) => {
+  const handleFile = (file, slot) => {
     if (!file || !file.type.startsWith("image/")) return;
     const reader = new FileReader();
-    reader.onload = (e) => { setImgData(e.target.result); setImgUrl(""); };
+    reader.onload = (e) => {
+      if (slot === 1) { setImgData(e.target.result); setImgUrl(""); }
+      else            { setImgData2(e.target.result); setImgUrl2(""); }
+    };
     reader.readAsDataURL(file);
   };
 
   const addItem = () => {
     if (!input.trim()) return;
-    const img = resolvedImg;
+    const img  = resolved1;
+    const img2 = resolved2;
     if (editId !== null) {
-      setData((d) => ({ ...d, [active]: d[active].map((item) => item.id === editId ? { ...item, name:input, note, rating, img } : item) }));
+      setData((d) => ({ ...d, [active]: d[active].map((item) => item.id === editId ? { ...item, name:input, note, rating, img, img2 } : item) }));
       setEditId(null);
     } else {
-      setData((d) => ({ ...d, [active]: [...d[active], { id:Date.now(), name:input, note, rating, img, added:new Date().toLocaleDateString("th-TH") }] }));
+      setData((d) => ({ ...d, [active]: [...d[active], { id:Date.now(), name:input, note, rating, img, img2, added:new Date().toLocaleDateString("th-TH") }] }));
     }
-    setInput(""); setNote(""); setRating("★★★★★"); setImgData(""); setImgUrl("");
+    setInput(""); setNote(""); setRating("★★★★★");
+    setImgData(""); setImgUrl(""); setImgData2(""); setImgUrl2("");
   };
 
   const deleteItem = (id) => setData((d) => ({ ...d, [active]: d[active].filter((i) => i.id !== id) }));
-  const startEdit  = (item) => { setEditId(item.id); setInput(item.name); setNote(item.note||""); setRating(item.rating||"★★★★★"); setImgData(item.img&&item.img.startsWith("data:")? item.img:""); setImgUrl(item.img&&!item.img.startsWith("data:")? item.img:""); };
-  const cancelEdit = () => { setEditId(null); setInput(""); setNote(""); setRating("★★★★★"); setImgData(""); setImgUrl(""); };
+  const startEdit  = (item) => {
+    setEditId(item.id); setInput(item.name); setNote(item.note||""); setRating(item.rating||"★★★★★");
+    setImgData(item.img&&item.img.startsWith("data:")?item.img:"");
+    setImgUrl(item.img&&!item.img.startsWith("data:")?item.img:"");
+    setImgData2(item.img2&&item.img2.startsWith("data:")?item.img2:"");
+    setImgUrl2(item.img2&&!item.img2.startsWith("data:")?item.img2:"");
+  };
+  const cancelEdit = () => { setEditId(null); setInput(""); setNote(""); setRating("★★★★★"); setImgData(""); setImgUrl(""); setImgData2(""); setImgUrl2(""); };
   const switchTab  = (id) => { setActive(id); setSearch(""); cancelEdit(); };
 
   const filtered = data[active].filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
 
   const iS = { width:"100%", background:"#1f1f1f", border:"1px solid #2a2a2a", borderRadius:10, padding:"10px 14px", color:"#fff", fontSize:15, outline:"none", display:"block" };
   const iBt = { background:"none", border:"1px solid #2a2a2a", borderRadius:7, color:"#444", width:30, height:30, cursor:"pointer", fontSize:13 };
+
+  const TabRow = ({ cats }) => (
+    <div className="tab-grid">
+      {cats.map((c) => {
+        const isActive = active === c.id;
+        return (
+          <button key={c.id} className={`tab-btn${isActive?" active":""}`} onClick={() => switchTab(c.id)}
+            style={{ borderBottom: isActive ? `2px solid ${c.color}` : "2px solid transparent", color: isActive ? c.color : "#484848" }}>
+            <span className="emoji">{c.emoji}</span>
+            <span className="label">{c.label}</span>
+            {data[c.id].length > 0 && (
+              <span className="count" style={{ background:isActive?c.color:"#222", color:isActive?"#000":"#555" }}>{data[c.id].length}</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const ImgSlot = ({ slot, resolved, imgData, setImgData, imgUrl, setImgUrl, dragOver, setDragOver, fileRef, label }) => (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", gap:6 }}>
+      <div style={{ fontSize:11, color:"#555", fontWeight:600 }}>🖼 {label}</div>
+      <div style={{ display:"flex", gap:6 }}>
+        <input value={imgUrl} onChange={(e)=>{ setImgUrl(e.target.value); setImgData(""); }}
+          placeholder="URL รูป..." style={{ ...iS, fontSize:11, color:"#888", flex:1, padding:"8px 10px" }} />
+        <button onClick={()=>fileRef.current.click()} style={{
+          flexShrink:0, background:"#1f1f1f", border:"1px solid #2a2a2a", borderRadius:10,
+          color:"#888", padding:"0 10px", cursor:"pointer", fontSize:11, whiteSpace:"nowrap",
+        }}>📁</button>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }}
+          onChange={(e)=>handleFile(e.target.files[0], slot)} />
+      </div>
+      <div
+        className={`drop-zone${dragOver?" dragover":""}`}
+        onDragOver={(e)=>{ e.preventDefault(); setDragOver(true); }}
+        onDragLeave={()=>setDragOver(false)}
+        onDrop={(e)=>{ e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0], slot); }}
+        onClick={()=>fileRef.current.click()}
+        style={{ padding:"10px", fontSize:11 }}
+      >
+        {resolved ? "✅ มีรูป — คลิกเพื่อเปลี่ยน" : "ลากรูปหรือคลิก"}
+      </div>
+      {resolved && (
+        <div style={{ position:"relative" }}>
+          <img src={resolved} alt="preview" onError={()=>{ setImgData(""); setImgUrl(""); }}
+            style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", borderRadius:10, border:"1px solid #2a2a2a", display:"block" }} />
+          <button onClick={()=>{ setImgData(""); setImgUrl(""); }} style={{
+            position:"absolute", top:6, right:6, background:"#000000cc", border:"none",
+            borderRadius:6, color:"#fff", width:24, height:24, cursor:"pointer", fontSize:12,
+          }}>✕</button>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div style={{ minHeight:"100vh", background:"#0c0c0c", display:"flex", flexDirection:"column" }}>
@@ -105,6 +242,132 @@ function App() {
             <div style={{ fontSize:28, fontWeight:800, color:"#fff", lineHeight:1 }}>My</div>
           </div>
           <div style={{ textAlign:"right" }}>
+            <div style={{ fontSize:28, fontWeight:900, color:cat.color, lineHeight:1 }}>{totalItems}</div>
+            <div style={{ fontSize:10, color:"#444", letterSpacing:1 }}>รายการทั้งหมด</div>
+          </div>
+        </div>
+
+        {/* Row 1 */}
+        <TabRow cats={ROW1} />
+        {/* Divider */}
+        <div style={{ borderTop:"1px solid #1a1a1a" }} />
+        {/* Row 2 */}
+        <TabRow cats={ROW2} />
+      </div>
+
+      {/* Body */}
+      <div style={{ flex:1, padding:"18px 16px", maxWidth:600, width:"100%", margin:"0 auto" }}>
+
+        {/* Input card */}
+        <div style={{ background:"#161616", border:`1px solid ${cat.color}22`, borderRadius:16, padding:16, marginBottom:18 }}>
+          <div style={{ fontSize:11, color:cat.color, marginBottom:10, fontWeight:700, letterSpacing:1 }}>
+            {cat.emoji} {editId ? "แก้ไขรายการ" : `เพิ่ม${cat.label}`}
+          </div>
+
+          <input value={input} onChange={(e)=>setInput(e.target.value)} onKeyDown={(e)=>e.key==="Enter"&&addItem()}
+            placeholder={`ชื่อ / ${cat.label}...`} style={iS} />
+          <input value={note} onChange={(e)=>setNote(e.target.value)}
+            placeholder="โน้ต หรือเหตุผลที่ชอบ (ไม่บังคับ)"
+            style={{ ...iS, color:"#888", fontSize:13, marginTop:6 }} />
+
+          {/* 2 image slots side by side */}
+          <div style={{ marginTop:10, display:"flex", gap:12 }}>
+            <ImgSlot slot={1} resolved={resolved1} imgData={imgData} setImgData={setImgData} imgUrl={imgUrl} setImgUrl={setImgUrl}
+              dragOver={dragOver} setDragOver={setDragOver} fileRef={fileRef} label="รูปซ้าย" />
+            <ImgSlot slot={2} resolved={resolved2} imgData={imgData2} setImgData={setImgData2} imgUrl={imgUrl2} setImgUrl={setImgUrl2}
+              dragOver={dragOver2} setDragOver={setDragOver2} fileRef={fileRef2} label="รูปขวา" />
+          </div>
+
+          <div style={{ display:"flex", gap:5, marginTop:12, flexWrap:"wrap", alignItems:"center" }}>
+            {RATINGS.map((r) => (
+              <button key={r} onClick={()=>setRating(r)} style={{
+                background:rating===r?cat.color+"22":"#1f1f1f",
+                border:`1px solid ${rating===r?cat.color:"#2a2a2a"}`,
+                borderRadius:7, color:rating===r?cat.color:"#555",
+                padding:"3px 9px", fontSize:11, cursor:"pointer",
+              }}>{r}</button>
+            ))}
+            <div style={{ flex:1 }} />
+            {editId && <button onClick={cancelEdit} style={{ background:"none", border:"1px solid #333", borderRadius:8, color:"#666", padding:"7px 12px", cursor:"pointer", fontSize:12 }}>ยกเลิก</button>}
+            <button onClick={addItem} disabled={!input.trim()} style={{
+              background:input.trim()?cat.color:"#222", color:input.trim()?"#000":"#444",
+              border:"none", borderRadius:10, padding:"8px 20px", fontSize:14, fontWeight:700,
+              cursor:input.trim()?"pointer":"not-allowed",
+            }}>{editId?"บันทึก":"เพิ่ม"}</button>
+          </div>
+        </div>
+
+        {/* Search */}
+        {data[active].length > 3 && (
+          <input value={search} onChange={(e)=>setSearch(e.target.value)}
+            placeholder={`🔍 ค้นหาใน${cat.label}...`}
+            style={{ ...iS, marginBottom:12, color:"#888", fontSize:13 }} />
+        )}
+
+        {/* List */}
+        {filtered.length === 0 ? (
+          <div style={{ textAlign:"center", padding:"48px 0", color:"#2e2e2e" }}>
+            <div style={{ fontSize:44, marginBottom:10 }}>{cat.emoji}</div>
+            <div style={{ fontSize:13 }}>{data[active].length===0?`เพิ่ม${cat.label}แรกเลย!`:"ไม่พบรายการ"}</div>
+          </div>
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {filtered.map((item, idx) => {
+              const hasImg1 = !!item.img;
+              const hasImg2 = !!item.img2;
+              const hasBoth = hasImg1 && hasImg2;
+              const hasAny  = hasImg1 || hasImg2;
+
+              return (
+                <div key={item.id} style={{
+                  background:"#141414", border:"1px solid #1e1e1e",
+                  borderLeft:`3px solid ${cat.color}`, borderRadius:12,
+                  overflow:"hidden", display:"flex", flexDirection:"column",
+                }}>
+                  {/* Images: 2-col grid 3:4 */}
+                  {hasAny && (
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr" }}>
+                      {hasImg1 && (
+                        <img src={item.img} alt={item.name} onError={(e)=>e.target.style.display="none"}
+                          style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
+                      )}
+                      {hasImg2 && (
+                        <img src={item.img2} alt={item.name} onError={(e)=>e.target.style.display="none"}
+                          style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block",
+                                   gridColumn: hasImg1 ? "auto" : "2" }} />
+                      )}
+                    </div>
+                  )}
+
+                  <div style={{ padding:"12px 14px", display:"flex", alignItems:"flex-start", gap:12 }}>
+                    <div style={{ width:26, height:26, borderRadius:7, background:cat.color+"18", color:cat.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, flexShrink:0 }}>{idx+1}</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight:600, fontSize:15, color:"#eee", marginBottom:2 }}>{item.name}</div>
+                      {item.note && <div style={{ fontSize:12, color:"#555", marginBottom:3 }}>{item.note}</div>}
+                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                        <span style={{ fontSize:12, color:cat.color+"cc" }}>{item.rating}</span>
+                        <span style={{ fontSize:11, color:"#383838" }}>{item.added}</span>
+                      </div>
+                    </div>
+                    <div style={{ display:"flex", gap:4, flexShrink:0 }}>
+                      <button onClick={()=>startEdit(item)} style={iBt}>✏️</button>
+                      <button onClick={()=>deleteItem(item.id)} style={iBt}>🗑</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
             <div style={{ fontSize:28, fontWeight:900, color:cat.color, lineHeight:1 }}>{totalItems}</div>
             <div style={{ fontSize:10, color:"#444", letterSpacing:1 }}>รายการทั้งหมด</div>
           </div>
