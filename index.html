@@ -162,7 +162,7 @@ function App() {
 
           {/* Image section */}
           <div style={{ marginTop:10, display:"flex", gap:8, flexDirection:"column" }}>
-            <div style={{ fontSize:11, color:"#555", fontWeight:600 }}>🖼 รูปภาพ (ไม่บังคับ)</div>
+            <div style={{ fontSize:11, color:"#555", fontWeight:600 }}>📷 รูปภาพ (ไม่บังคับ)</div>
             <div style={{ display:"flex", gap:8 }}>
               <input value={imgUrl} onChange={e => { setImgUrl(e.target.value); setImgData(""); }}
                 placeholder="วางลิงก์รูป (URL)..."
@@ -170,7 +170,7 @@ function App() {
               <button onClick={() => fileRef.current.click()} style={{
                 flexShrink:0, background:"#1f1f1f", border:"1px solid #2a2a2a", borderRadius:10,
                 color:"#888", padding:"0 14px", cursor:"pointer", fontSize:12, whiteSpace:"nowrap",
-              }}>📁 อัปโหลด</button>
+              }}>🗄️ อัปโหลด</button>
               <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }}
                 onChange={e => handleFile(e.target.files[0])} />
             </div>
@@ -181,7 +181,7 @@ function App() {
               onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
               onClick={() => fileRef.current.click()}
             >
-              {resolvedImg ? "✅ มีรูปแล้ว — คลิกหรือลากเพื่อเปลี่ยน" : "ลากรูปมาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์"}
+              {resolvedImg ? "✔ มีรูปแล้ว — คลิกหรือลากเพื่อเปลี่ยน" : "ลากรูปมาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์"}
             </div>
             {resolvedImg && (
               <div style={{ position:"relative" }}>
@@ -251,7 +251,7 @@ function App() {
                     </div>
                   </div>
                   <div style={{ display:"flex", gap:4, flexShrink:0 }}>
-                    <button onClick={() => startEdit(item)} style={iBt}>✏️</button>
+                    <button onClick={() => startEdit(item)} style={iBt}>✒️</button>
                     <button onClick={() => deleteItem(item.id)} style={iBt}>🗑</button>
                   </div>
                 </div>
