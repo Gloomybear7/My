@@ -22,6 +22,36 @@
   .tab-btn span.label { font-size:9px; font-weight:400; line-height:1.2; text-align:center; word-break:break-word; width:100%; }
   .tab-btn.active span.label { font-weight:700; }
   .tab-btn span.count { border-radius:8px; padding:0 5px; font-size:9px; font-weight:700; }
+
+  /* Modal overlay */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 999;
+    padding: 0;
+  }
+  .modal-sheet {
+    background: #161616;
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-width: 480px;
+    padding: 16px;
+    padding-bottom: 32px;
+    animation: slideUp 0.22s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(60px); opacity:0; }
+    to   { transform: translateY(0);    opacity:1; }
+  }
+  .modal-drag-bar {
+    width: 40px; height: 4px;
+    background: #333; border-radius: 2px;
+    margin: 0 auto 14px;
+  }
 </style>
 </head>
 <body>
@@ -64,12 +94,13 @@ function App() {
   const [editId,   setEditId]   = React.useState(null);
   const [search,   setSearch]   = React.useState("");
   const [dragOver, setDragOver] = React.useState(false);
+  const [modalItem, setModalItem] = React.useState(null);
   const fileRef = React.useRef();
 
   React.useEffect(() => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {} }, [data]);
 
-  const cat        = CATEGORIES.find(c => c.id === active);
-  const totalItems = Object.values(data).reduce((a, b) => a + b.length, 0);
+  const cat         = CATEGORIES.find(c => c.id === active);
+  const totalItems  = Object.values(data).reduce((a, b) => a + b.length, 0);
   const resolvedImg = imgData || imgUrl || "";
 
   const handleFile = file => {
@@ -79,7 +110,9 @@ function App() {
     reader.readAsDataURL(file);
   };
 
-  const resetForm = () => { setInput(""); setNote(""); setRating("★★★★★"); setImgData(""); setImgUrl(""); };
+  const resetForm  = () => { setInput(""); setNote(""); setRating("★★★★★"); setImgData(""); setImgUrl(""); };
+  const cancelEdit = () => { setEditId(null); resetForm(); };
+  const switchTab  = id => { setActive(id); setSearch(""); cancelEdit(); };
 
   const addItem = () => {
     if (!input.trim()) return;
@@ -93,14 +126,18 @@ function App() {
     resetForm();
   };
 
-  const deleteItem = id  => setData(d => ({ ...d, [active]: d[active].filter(i => i.id !== id) }));
-  const startEdit  = item => {
+  const deleteItem = id => {
+    setData(d => ({ ...d, [active]: d[active].filter(i => i.id !== id) }));
+    setModalItem(null);
+  };
+
+  const startEdit = item => {
+    setModalItem(null);
     setEditId(item.id); setInput(item.name); setNote(item.note||""); setRating(item.rating||"★★★★★");
     setImgData(item.img && item.img.startsWith("data:") ? item.img : "");
     setImgUrl (item.img && !item.img.startsWith("data:") ? item.img : "");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  const cancelEdit = () => { setEditId(null); resetForm(); };
-  const switchTab  = id  => { setActive(id); setSearch(""); cancelEdit(); };
 
   const filtered = data[active].filter(i => i.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -170,7 +207,7 @@ function App() {
               <button onClick={() => fileRef.current.click()} style={{
                 flexShrink:0, background:"#1f1f1f", border:"1px solid #2a2a2a", borderRadius:10,
                 color:"#888", padding:"0 14px", cursor:"pointer", fontSize:12, whiteSpace:"nowrap",
-              }}>🗄️ อัปโหลด</button>
+              }}>📁 อัปโหลด</button>
               <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }}
                 onChange={e => handleFile(e.target.files[0])} />
             </div>
@@ -186,9 +223,9 @@ function App() {
             {resolvedImg && (
               <div style={{ position:"relative" }}>
                 <img src={resolvedImg} alt="preview" onError={() => setImgUrl("")}
-                  style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", borderRadius:10, border:"1px solid #2a2a2a", display:"block" }} />
+                  style={{ width:"50%", aspectRatio:"3/4", objectFit:"cover", borderRadius:10, border:"1px solid #2a2a2a", display:"block" }} />
                 <button onClick={() => { setImgData(""); setImgUrl(""); }} style={{
-                  position:"absolute", top:6, right:6, background:"#000000cc", border:"none",
+                  position:"absolute", top:6, left:"calc(50% - 30px)", background:"#000000cc", border:"none",
                   borderRadius:6, color:"#fff", width:24, height:24, cursor:"pointer", fontSize:12,
                 }}>✕</button>
               </div>
@@ -234,16 +271,23 @@ function App() {
               <div key={item.id} style={{
                 background:"#141414", border:"1px solid #1e1e1e",
                 borderLeft:`3px solid ${cat.color}`, borderRadius:12,
-                overflow:"hidden", display:"flex", flexDirection:"column",
+                overflow:"hidden",
               }}>
-                {item.img && (
-                  <img src={item.img} alt={item.name} onError={e => e.target.style.display = "none"}
-                    style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
-                )}
                 <div style={{ padding:"12px 14px", display:"flex", alignItems:"flex-start", gap:12 }}>
                   <div style={{ width:26, height:26, borderRadius:7, background:cat.color+"18", color:cat.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, flexShrink:0 }}>{idx+1}</div>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:600, fontSize:15, color:"#eee", marginBottom:2 }}>{item.name}</div>
+                    {/* กดชื่อเพื่อดูรูป */}
+                    <div
+                      onClick={() => item.img ? setModalItem(item) : null}
+                      style={{
+                        fontWeight:600, fontSize:15, color:"#eee", marginBottom:2,
+                        cursor: item.img ? "pointer" : "default",
+                        display:"flex", alignItems:"center", gap:6,
+                      }}
+                    >
+                      {item.name}
+                      {item.img && <span style={{ fontSize:10, color:cat.color+"88", fontWeight:400 }}>📷</span>}
+                    </div>
                     {item.note && <div style={{ fontSize:12, color:"#555", marginBottom:3 }}>{item.note}</div>}
                     <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                       <span style={{ fontSize:12, color:cat.color+"cc" }}>{item.rating}</span>
@@ -260,6 +304,43 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Modal — bottom sheet */}
+      {modalItem && (
+        <div className="modal-overlay" onClick={() => setModalItem(null)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div className="modal-drag-bar" onClick={() => setModalItem(null)} style={{ cursor:"pointer" }} />
+
+            {/* Image 3:4, แสดงครึ่งนึง = width 50% of sheet */}
+            <div style={{ display:"flex", justifyContent:"center", marginBottom:14 }}>
+              <div style={{ width:"50%", position:"relative" }}>
+                <img src={modalItem.img} alt={modalItem.name}
+                  style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", borderRadius:12, display:"block" }} />
+              </div>
+            </div>
+
+            {/* Info */}
+            <div style={{ textAlign:"center", marginBottom:4 }}>
+              <div style={{ fontWeight:700, fontSize:17, color:"#eee" }}>{modalItem.name}</div>
+              {modalItem.note && <div style={{ fontSize:13, color:"#666", marginTop:4 }}>{modalItem.note}</div>}
+              <div style={{ fontSize:13, color:cat.color+"cc", marginTop:6 }}>{modalItem.rating}</div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display:"flex", gap:8, marginTop:14 }}>
+              <button onClick={() => startEdit(modalItem)} style={{
+                flex:1, background:"#1f1f1f", border:"1px solid #2a2a2a", borderRadius:10,
+                color:"#aaa", padding:"10px", fontSize:13, cursor:"pointer",
+              }}>✒️ แก้ไข</button>
+              <button onClick={() => deleteItem(modalItem.id)} style={{
+                flex:1, background:"#1f1f1f", border:"1px solid #2a2a2a", borderRadius:10,
+                color:"#c04040", padding:"10px", fontSize:13, cursor:"pointer",
+              }}>🗑 ลบ</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -268,4 +349,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(
 </script>
 </body>
 </html>
-
